@@ -245,6 +245,36 @@ function App() {
     }
   };
 
+  const handleDeleteHistory = async (comicId: string) => {
+    if (!window.confirm('确定要删除这条历史记录吗？此操作不可撤销。')) {
+      return;
+    }
+    
+    try {
+      const response = await axios.delete(`/api/v1/comics/${comicId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.status === 200) {
+        // 从本地历史记录中移除
+        setHistory(history.filter(item => item.comic_id !== comicId));
+        
+        // 如果删除的是当前正在查看的记录，清空预览
+        if (activeComicId === comicId) {
+          setActiveComicId(null);
+          setResult(null);
+        }
+        
+        setStatus({ status: 'success', detail: '记录删除成功' });
+      }
+    } catch (error) {
+      console.error('删除记录失败:', error);
+      setError('删除记录失败，请重试');
+    }
+  };
+
   const handleLogout = () => {
     setToken(null);
     setAuthMode("login");
@@ -407,8 +437,23 @@ function App() {
               {history.map((item) => (
                 <li key={item.comic_id}>
                   <button onClick={() => handleSelectHistory(item.comic_id)}>
-                    <span>{item.title ?? "未命名"}</span>
-                    <small>{statusCopy[item.status] ?? item.status}</small>
+                    <div className="history-item-content">
+                      <span className="history-title">{item.title ?? "未命名"}</span>
+                      <div className="history-meta">
+                        <small className="history-status">{statusCopy[item.status] ?? item.status}</small>
+                        <small className="history-time">{item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}</small>
+                      </div>
+                    </div>
+                  </button>
+                  <button 
+                    className="delete-btn" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteHistory(item.comic_id);
+                    }}
+                    title="删除记录"
+                  >
+                    🗑️
                   </button>
                 </li>
               ))}
