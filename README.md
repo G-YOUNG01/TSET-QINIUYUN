@@ -22,7 +22,7 @@ Novel2Comic 将长篇小说文本转换为带配音的漫画分镜稿。系统�
 - **FastAPI**：挂载鉴权与漫画路由，初始化数据库并提供静态资源服务。
 - **Pipeline**：异步协同故事拆分、图像生成、语音合成，持续回写状态，支持 Responses API 或 Chat Completions 兼容接口自动回退。
 - **SQLModel**：持久化 `User`、`Comic`、`Panel` 数据，实现任务可追溯与重放。
-- **OpenAI / 兼容服务**：`Responses` 或兼容 Chat Completions 拆分分镜，`Images` 生成画面，`Audio TTS` 输出旁白。
+- **OpenAI / 兼容服务**：默认指向如云兼容 OpenAI 的 `https://api.ruyun.fun/v1`，`Responses`/`Chat Completions` 拆分分镜，`Images` 生成画面，`Audio TTS` 输出旁白。
 - **本地存储**：PNG / MP3 落盘至 `backend/output/`，通过 `/static` 公开访问。
 
 ## 模块设计与依赖
@@ -60,11 +60,11 @@ uvicorn app.main:app --reload  # 可按需添加 --host / --port
 在 `.env` 或环境变量中准备必需配置：
 
 ```pwsh
-$env:OPENAI_API_KEY = "sk-..."
-$env:OPENAI_BASE_URL = "https://api.openai.com/v1"  # 使用官方地址时可省略
+$env:OPENAI_API_KEY = "sk-..."             # 勿使用仓库里的占位密钥
+$env:OPENAI_BASE_URL = "https://api.ruyun.fun/v1"  # 使用官方地址时可省略或改为 https://api.openai.com/v1
 $env:OPENAI_OUTLINE_MODEL = "gpt-4.1-mini"
 $env:OPENAI_PROMPT_MODEL = "gpt-4o-mini"
-$env:OPENAI_IMAGE_MODEL = "gpt-image-1"
+$env:OPENAI_IMAGE_MODEL = "dall-e-3"
 $env:OPENAI_TTS_VOICE = "alloy"
 $env:JWT_SECRET_KEY = "replace-with-a-strong-secret"
 $env:DATABASE_URL = "sqlite+aiosqlite:///./novel2comic.db"
@@ -80,7 +80,7 @@ npm install
 npm run dev
 ```
 
-Vite dev server 会将 `/api` 请求代理至 `http://localhost:8000`。首次使用请在页面内注册并登录，前端会在后续请求中自动附带 `Authorization: Bearer <token>`。
+开发阶段可将 `.env.local`（Vite）写入 `VITE_API_BASE=http://localhost:8000`，Vite dev server 默认把 `/api` 请求代理到 `http://localhost:8000`。首次使用请在页面内注册并登录，后续请求会自动携带 `Authorization: Bearer <token>`。
 
 ## API 调用流程
 
