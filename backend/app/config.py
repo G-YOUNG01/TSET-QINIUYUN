@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     openai_image_model: str = Field("dall-e-3", env="OPENAI_IMAGE_MODEL")
 
     storage_bucket: Optional[str] = Field(None, env="STORAGE_BUCKET")
-    storage_base_url: Optional[str] = Field(None, env="STORAGE_BASE_URL")
+    storage_base_url: Optional[str] = Field("http://localhost:8000/static", env="STORAGE_BASE_URL")
 
     class Config:
         env_file = ".env"

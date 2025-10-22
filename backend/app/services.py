@@ -147,10 +147,11 @@ class MediaClient:
 
     async def synthesize_speech(self, text: str, voice: str, language: str) -> str:
         speech = await self._client.audio.speech.with_streaming_response.create(
-            model="gpt-4o-mini-tts",
+            model="tts-1",
             voice=voice or settings.openai_tts_voice,
             input=text,
-            language=language,
+            # 第三方API可能不支持language参数，暂时移除
+            # language=language,
         )
         file_name = f"tts-{uuid.uuid4()}.mp3"
         file_path = _storage_root / file_name
@@ -202,13 +203,17 @@ class GenerationPipeline:
         narration_audio_url = ""
         if panel.summary.strip():
             try:
+                logger.info("开始TTS语音合成，文本长度: %d", len(panel.summary))
                 narration_audio_url = await self._media.synthesize_speech(
                     text=panel.summary,
                     voice=request.settings.voice,
                     language=request.settings.language,
                 )
+                logger.info("TTS语音合成成功，音频URL: %s", narration_audio_url)
             except Exception as exc:  # pragma: no cover - external service
-                logger.warning("TTS generation failed: %s", exc)
+                logger.error("TTS generation failed: %s", exc)
+                logger.error("TTS调用详情 - 文本: %s, 语音: %s, 语言: %s", 
+                           panel.summary, request.settings.voice, request.settings.language)
         return PanelAsset(
             panel_id=str(uuid.uuid4()),
             image_url=image_url,
