@@ -1,0 +1,271 @@
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #10111a;
+  color: #f3f4f6;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+header {
+  padding: 2rem 3rem;
+  background: linear-gradient(135deg, #1f2937, #111827);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2.5rem;
+}
+
+header p {
+  margin: 0;
+  opacity: 0.7;
+}
+
+header .logout {
+  margin-left: auto;
+}
+
+main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  padding: 2rem 3rem;
+  flex: 1;
+}
+
+.editor form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: rgba(17, 24, 39, 0.8);
+  padding: 1.5rem;
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  background: rgba(17, 24, 39, 0.75);
+  padding: 1.25rem;
+  border-radius: 16px;
+  max-width: 400px;
+  width: 100%;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+input,
+textarea,
+select {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: none;
+  background: rgba(31, 41, 55, 0.8);
+  color: #f3f4f6;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.row {
+  display: flex;
+  gap: 1rem;
+}
+
+button {
+  padding: 0.85rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  background: #6366f1;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px rgba(99, 102, 241, 0.3);
+}
+
+.status {
+  margin-top: 1.5rem;
+  background: rgba(17, 24, 39, 0.9);
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.error {
+  margin-top: 1rem;
+  color: #f87171;
+}
+
+.success {
+  margin-top: 0.5rem;
+  color: #34d399;
+}
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, rgba(99, 102, 241, 0.25), transparent),
+    #0b0c14;
+  padding: 2rem;
+}
+
+.auth-card h1 {
+  font-size: 2rem;
+  margin-bottom: 0.25rem;
+}
+
+.auth-subtitle {
+  margin: 0 0 1rem 0;
+  opacity: 0.75;
+}
+
+.auth-mode-toggle {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.auth-mode-toggle button {
+  flex: 1;
+  background: rgba(31, 41, 55, 0.8);
+  border-radius: 12px;
+  padding: 0.65rem 0;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.auth-mode-toggle button.active {
+  background: #6366f1;
+  transform: translateY(-1px);
+}
+
+.auth-mode-toggle button:hover {
+  background: rgba(99, 102, 241, 0.35);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-form button {
+  width: 100%;
+}
+
+.auth-message {
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+.auth-hint {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  opacity: 0.6;
+  text-align: center;
+}
+
+.preview {
+  background: rgba(17, 24, 39, 0.6);
+  border-radius: 16px;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.history {
+  margin-top: 2rem;
+  background: rgba(17, 24, 39, 0.75);
+  padding: 1rem;
+  border-radius: 16px;
+}
+
+.history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.history li button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(31, 41, 55, 0.7);
+  border: none;
+  color: inherit;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.history li button:hover {
+  background: rgba(99, 102, 241, 0.25);
+}
+
+.panel-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 0;
+  margin: 0;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.panel-list img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 1024px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+}
