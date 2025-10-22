@@ -165,8 +165,8 @@ GET /api/v1/comics
 
 - **鉴权安全**：JWT Bearer Token 确保任务仅限本人访问。
 - **分镜拆分**：OpenAI Responses API 将小说片段拆成 4~8 个分镜。
-- **图像生成**：`gpt-image-1` 输出 base64 PNG，落盘至 `backend/output` 并通过 `/static` 暴露。
-- **语音合成**：`gpt-4o-mini-tts` 生成旁白 MP3 音频流。
+- **图像生成**：`dall-e-3` 输出 base64 PNG，落盘至 `backend/output` 并通过 `/static` 暴露。
+- **语音合成**：`tts-1` 生成旁白 MP3 音频流。
 - **持久化**：SQLModel 存储 Comic/Panel，便于历史查询与复核。
 - **前端体验**：身份验证 + 任务进度条 + 历史列表 + 图像与配音预览。
 
@@ -183,7 +183,7 @@ GET /api/v1/comics
   $env:OPENAI_API_KEY = "sk-xxxx"
   $env:OPENAI_OUTLINE_MODEL = "gpt-4.1-mini"      # 兼容服务提供的模型名
   $env:OPENAI_PROMPT_MODEL  = "gpt-4o-mini"
-  $env:OPENAI_IMAGE_MODEL   = "gpt-image-1"       # 若服务不支持生图，可换成可用模型
+  $env:OPENAI_IMAGE_MODEL   = "dall-e-3"          # 若服务不支持生图，可换成兼容模型
   ```
 
 2. 重启 `uvicorn app.main:app --reload`，前端刷新后重新登录即可。
