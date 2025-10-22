@@ -1,0 +1,2 @@
+[console_scripts]
+novel2comic = src.cli:main

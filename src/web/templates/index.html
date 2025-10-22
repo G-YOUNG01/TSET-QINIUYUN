@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}任务面板 · novel2comic{% endblock %}
+{% block content %}
+<section>
+  <h2>新建生成任务</h2>
+  <form action="/submit" method="post" enctype="multipart/form-data">
+    <div class="field">
+      <label for="files">章节文件（支持 .txt / .md，可多选）：</label>
+      <input id="files" name="files" type="file" accept=".txt,.md" multiple required>
+    </div>
+    <div class="field">
+      <label for="output_dir">输出目录：</label>
+      <input id="output_dir" name="output_dir" type="text" value="output" required>
+    </div>
+    <div class="field">
+      <label for="panel_concurrency">面板并发数：</label>
+      <input id="panel_concurrency" name="panel_concurrency" type="number" value="2" min="1" max="8">
+    </div>
+    <div class="field">
+      <label for="database">SQLite 数据库（可选）：</label>
+      <input id="database" name="database" type="text" placeholder="例如 .\\records.sqlite">
+    </div>
+    <div class="field">
+      <label><input type="checkbox" name="with_tts" value="true"> 启用语音合成</label>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" name="enable_quality" value="true"> 启用自动质检</label>
+    </div>
+    <button type="submit">开始生成</button>
+  </form>
+</section>
+<section>
+  <h2>任务历史</h2>
+  {% if jobs %}
+  <table>
+    <thead>
+      <tr>
+        <th>任务编号</th>
+        <th>状态</th>
+        <th>创建时间</th>
+        <th>输出目录</th>
+        <th>详情</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td>{{ job.job_id }}</td>
+        <td class="status-{{ job.status }}">{{ job.status }}</td>
+        <td>{{ job.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td>{{ job.output_dir }}</td>
+        <td><a href="/jobs/{{ job.job_id }}">查看</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>暂时没有任务记录，上传章节即可开始一次新的生成。</p>
+  {% endif %}
+</section>
+{% endblock %}

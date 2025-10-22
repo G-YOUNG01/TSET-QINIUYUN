@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}任务 {{ job.job_id }} · novel2comic{% endblock %}
+{% block content %}
+<section>
+  <h2>任务概览</h2>
+  <p><strong>编号：</strong>{{ job.job_id }}</p>
+  <p><strong>状态：</strong><span class="status-{{ job.status }}">{{ job.status }}</span></p>
+  <p><strong>创建时间：</strong>{{ job.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</p>
+  {% if job.started_at %}<p><strong>开始时间：</strong>{{ job.started_at.strftime("%Y-%m-%d %H:%M:%S") }}</p>{% endif %}
+  {% if job.finished_at %}<p><strong>结束时间：</strong>{{ job.finished_at.strftime("%Y-%m-%d %H:%M:%S") }}</p>{% endif %}
+  <p><strong>输出目录：</strong>{{ job.output_dir }}</p>
+  <p><strong>章节缓存：</strong>{{ job.chapters_dir }}</p>
+  <p><strong>消息：</strong>{{ job.message }}</p>
+</section>
+<section>
+  <h2>元数据文件</h2>
+  {% if job.metadata_files %}
+  <ul class="meta-list">
+    {% for meta in job.metadata_files %}
+    <li>{{ meta }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>暂无元数据输出，任务可能仍在运行。</p>
+  {% endif %}
+</section>
+{% if job.error_trace %}
+<section>
+  <h2>错误堆栈</h2>
+  <pre class="error-trace">{{ job.error_trace }}</pre>
+</section>
+{% endif %}
+<p><a href="/">返回任务面板</a></p>
+{% endblock %}
