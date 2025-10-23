@@ -4,18 +4,33 @@ Novel2Comic 将长篇小说文本转换为带配音的漫画分镜稿。系统�
 
 ## 系统架构图
 
-```
-┌───────────┐     ┌────────────┐     ┌────────────┐     ┌────────────┐
-│ React/Vite│────▶│ FastAPI REST│────▶│ Pipeline 协调 │────▶│ OpenAI APIs │
-└────┬──────┘     └────┬───────┘     └────┬────────┘     └────┬────────┘
-     │                  │                │                   │
-     │                  │                │                   │
-     │                  │        ┌───────▼──────┐    ┌───────▼─────┐
-     │                  │        │ SQLModel ORM │    │ 本地存储输出 │
-     │                  └────────┤  Comic/Panel │    └──────────────┘
-     │                           └──────────────┘
-     ▼
- 浏览器用户
+```mermaid
+graph LR
+    A[React/Vite] --> B[FastAPI REST]
+    B --> C[Pipeline 协调]
+    C --> D[OpenAI APIs]
+    
+    B --> E[SQLModel ORM<br/>Comic/Panel]
+    C --> E
+    
+    D --> F[本地存储输出]
+    
+    A --> G[浏览器用户]
+    
+    %% 样式优化（可选，增强可读性）
+    classDef front fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef back fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef pipe fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef ai fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef db fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef user fill:#f1f8e9,stroke:#558b2f,stroke-width:2px
+    
+    class A,G front
+    class B back
+    class C pipe
+    class D ai
+    class E db
+    class F back
 ```
 
 - **前端**：React + Axios 处理登录、任务提交、历史记录与结果预览。
