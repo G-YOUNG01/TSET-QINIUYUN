@@ -1,7 +1,6 @@
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
-
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -34,6 +33,8 @@ class ComicRequest(BaseModel):
         default_factory=GenerationSettings, description="Model tuning switches"
     )
     title: Optional[str] = Field(None, description="Comic title")
+    panel_count: Optional[int] = Field(default=None, ge=1, le=20, description="Number of panels to generate, null for smart paneling")
+    use_smart_panel: bool = Field(default=False, description="Use AI to determine optimal panel count")
 
 
 class PanelAsset(BaseModel):

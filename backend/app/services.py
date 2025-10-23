@@ -64,25 +64,102 @@ class LLMClient:
         return (choice.content if choice and choice.content else "").strip()
 
     async def build_outline(self, request: ComicRequest) -> List[PanelRequest]:
-        system_prompt = (
-            "你是一名资深漫画分镜师。请从输入小说中提炼 4-8 个场景。"
-            "严格输出 JSON 数组，每个元素包含 title 与 summary 字段。"
-        )
-        outline_text = await self._generate_text(
-            [
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": f"小说内容：\n{request.novel_text}",
-                },
-            ],
-            model=settings.openai_outline_model,
-            temperature=0.6,
-        )
-        try:
-            data = json.loads(outline_text)
-        except json.JSONDecodeError as exc:  # pragma: no cover - depends on model
-            raise ValueError("模型返回非 JSON 格式，请调整提示词") from exc
+        # 智能分镜逻辑：如果用户选择智能分镜，让AI决定最佳分镜数量
+        if request.use_smart_panel:
+            # 智能分镜：让AI分析小说内容并决定最佳分镜数量
+            style_name = {
+                "manga": "日漫叙事",
+                "cinematic": "电影分镜", 
+                "western": "欧美漫画"
+            }.get(request.settings.narrative_style, "漫画")
+            
+            system_prompt = (
+                f"你是一名资深{style_name}漫画分镜师。请分析小说内容，根据剧情复杂度、关键转折点和叙事节奏，"
+                f"决定最适合的分镜数量（建议4-10个）。输出格式：先给出分镜数量建议，然后是JSON数组。"
+                f"示例：'建议分镜数量：6'，然后换行输出JSON数组。"
+                "每个JSON元素包含title与summary字段。"
+            )
+            
+            outline_text = await self._generate_text(
+                [
+                    {"role": "system", "content": system_prompt},
+                    {
+                        "role": "user",
+                        "content": f"小说内容：\n{request.novel_text}",
+                    },
+                ],
+                model=settings.openai_outline_model,
+                temperature=0.7,  # 稍高温度以鼓励创造性分析
+            )
+            
+            # 解析AI返回的分镜数量建议和分镜内容
+            lines = outline_text.strip().split('\n')
+            panel_count = 6  # 默认值
+            json_start_index = 0
+            
+            for i, line in enumerate(lines):
+                if '建议分镜数量：' in line:
+                    try:
+                        panel_count = int(line.split('：')[1].strip())
+                        # 确保分镜数量在合理范围内
+                        panel_count = max(4, min(10, panel_count))
+                        json_start_index = i + 1
+                        break
+                    except (ValueError, IndexError):
+                        pass
+            
+            # 提取JSON部分
+            json_text = '\n'.join(lines[json_start_index:])
+            try:
+                data = json.loads(json_text)
+            except json.JSONDecodeError:
+                # 如果JSON解析失败，尝试直接解析整个文本
+                try:
+                    data = json.loads(outline_text)
+                except json.JSONDecodeError as exc:
+                    raise ValueError("模型返回非 JSON 格式，请调整提示词") from exc
+        else:
+            # 手动指定分镜数量
+            panel_count = request.panel_count or 6  # 默认6个分镜
+            style_name = {
+                "manga": "日漫叙事",
+                "cinematic": "电影分镜", 
+                "western": "欧美漫画"
+            }.get(request.settings.narrative_style, "漫画")
+            
+            system_prompt = (
+                f"你是一名资深{style_name}漫画分镜师。请从输入小说中提炼 {panel_count} 个关键场景。"
+                f"确保分镜风格保持{style_name}的一致性，包括角色设计、画面构图和叙事节奏。"
+                "严格输出 JSON 数组，每个元素包含 title 与 summary 字段。"
+            )
+            outline_text = await self._generate_text(
+                [
+                    {"role": "system", "content": system_prompt},
+                    {
+                        "role": "user",
+                        "content": f"小说内容：\n{request.novel_text}",
+                    },
+                ],
+                model=settings.openai_outline_model,
+                temperature=0.6,
+            )
+            try:
+                data = json.loads(outline_text)
+            except json.JSONDecodeError as exc:
+                raise ValueError("模型返回非 JSON 格式，请调整提示词") from exc
+        
+        # 处理分镜数量与要求不符的情况
+        if len(data) > panel_count:
+            data = data[:panel_count]
+        elif len(data) < panel_count:
+            # 如果分镜数量不足，使用最后一个分镜补充
+            last_panel = data[-1] if data else {"title": "补充场景", "summary": "延续前一个场景的剧情发展"}
+            for i in range(len(data), panel_count):
+                data.append({
+                    "title": f"{last_panel.get('title', '场景')} {i+1}",
+                    "summary": f"{last_panel.get('summary', '剧情延续')} - 补充视角"
+                })
+        
         panels: List[PanelRequest] = []
         for item in data:
             panels.append(
@@ -90,23 +167,32 @@ class LLMClient:
             )
         return panels
 
-    async def describe_panel(self, panel: PanelRequest) -> str:
+    async def describe_panel(self, panel: PanelRequest, narrative_style: str = "manga") -> str:
+        # 根据叙事风格调整提示词
+        style_prompts = {
+            "manga": "日式漫画风格，强调动态线条、夸张表情、速度线效果，使用网点纸纹理",
+            "cinematic": "电影镜头风格，强调光影对比、景深效果、电影构图，使用电影胶片质感",
+            "western": "欧美漫画风格，强调肌肉线条、写实比例、粗犷笔触，使用美漫色彩风格"
+        }
+        style_prompt = style_prompts.get(narrative_style, "漫画风格")
+        
         return await self._generate_text(
             [
                 {
                     "role": "system",
-                    "content": "你是漫画视觉提示词专家，需生成适合扩散模型的英文提示。",
+                    "content": f"你是{style_prompt}视觉提示词专家，需生成适合扩散模型的英文提示。",
                 },
                 {
                     "role": "user",
                     "content": (
                         f"请将以下分镜摘要转换为图像生成提示：\n{panel.summary}" \
-                        "\n输出应强调构图、光影、角色神态、服装与背景。"
+                        f"\n输出应强调{style_prompt}的视觉特征，包括构图、光影、角色神态、服装与背景。" \
+                        "\n确保提示词能够保持风格一致性。"
                     ),
                 },
             ],
             model=settings.openai_prompt_model,
-            temperature=0.7,
+            temperature=0.5,  # 降低温度以提高一致性
         )
 
 
@@ -146,7 +232,7 @@ class MediaClient:
 
 
     async def synthesize_speech(self, text: str, voice: str, language: str) -> str:
-        speech = await self._client.audio.speech.with_streaming_response.create(
+        response = await self._client.audio.speech.create(
             model="tts-1",
             voice=voice or settings.openai_tts_voice,
             input=text,
@@ -155,9 +241,7 @@ class MediaClient:
         )
         file_name = f"tts-{uuid.uuid4()}.mp3"
         file_path = _storage_root / file_name
-        with file_path.open("wb") as output_file:
-            async for chunk in speech.iter_bytes():
-                output_file.write(chunk)
+        file_path.write_bytes(response.content)
         if settings.storage_base_url:
             return f"{settings.storage_base_url.rstrip('/')}/{file_name}"
         return f"/static/{file_name}"
@@ -196,7 +280,7 @@ class GenerationPipeline:
     async def _create_panel_assets(
         self, comic: Comic, panel: PanelRequest, request: ComicRequest
     ) -> PanelAsset:
-        prompt = await self._llm.describe_panel(panel)
+        prompt = await self._llm.describe_panel(panel, request.settings.narrative_style)
         image_url = await self._media.generate_image(
             prompt=prompt, resolution=request.settings.panel_resolution
         )

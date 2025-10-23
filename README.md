@@ -22,7 +22,7 @@ Novel2Comic 将长篇小说文本转换为带配音的漫画分镜稿。系统�
 - **FastAPI**：挂载鉴权与漫画路由，初始化数据库并提供静态资源服务。
 - **Pipeline**：异步协同故事拆分、图像生成、语音合成，持续回写状态，支持 Responses API 或 Chat Completions 兼容接口自动回退。
 - **SQLModel**：持久化 `User`、`Comic`、`Panel` 数据，实现任务可追溯与重放。
-- **OpenAI / 兼容服务**：默认指向如云兼容 OpenAI 的 `https://api.ruyun.fun/v1`，`Responses`/`Chat Completions` 拆分分镜，`Images` 生成画面，`Audio TTS` 输出旁白。
+- **OpenAI / 兼容服务**：`Responses` 或兼容 Chat Completions 拆分分镜，`Images` 生成画面，`Audio TTS` 输出旁白。
 - **本地存储**：PNG / MP3 落盘至 `backend/output/`，通过 `/static` 公开访问。
 
 ## 模块设计与依赖
@@ -60,11 +60,11 @@ uvicorn app.main:app --reload  # 可按需添加 --host / --port
 在 `.env` 或环境变量中准备必需配置：
 
 ```pwsh
-$env:OPENAI_API_KEY = "sk-..."             # 勿使用仓库里的占位密钥
-$env:OPENAI_BASE_URL = "https://api.ruyun.fun/v1"  # 使用官方地址时可省略或改为 https://api.openai.com/v1
+$env:OPENAI_API_KEY = "sk-..."
+$env:OPENAI_BASE_URL = "https://api.openai.com/v1"  # 使用官方地址时可省略
 $env:OPENAI_OUTLINE_MODEL = "gpt-4.1-mini"
 $env:OPENAI_PROMPT_MODEL = "gpt-4o-mini"
-$env:OPENAI_IMAGE_MODEL = "dall-e-3"
+$env:OPENAI_IMAGE_MODEL = "gpt-image-1"
 $env:OPENAI_TTS_VOICE = "alloy"
 $env:JWT_SECRET_KEY = "replace-with-a-strong-secret"
 $env:DATABASE_URL = "sqlite+aiosqlite:///./novel2comic.db"
@@ -80,7 +80,7 @@ npm install
 npm run dev
 ```
 
-开发阶段可将 `.env.local`（Vite）写入 `VITE_API_BASE=http://localhost:8000`，Vite dev server 默认把 `/api` 请求代理到 `http://localhost:8000`。首次使用请在页面内注册并登录，后续请求会自动携带 `Authorization: Bearer <token>`。
+Vite dev server 会将 `/api` 请求代理至 `http://localhost:8000`。首次使用请在页面内注册并登录，前端会在后续请求中自动附带 `Authorization: Bearer <token>`。
 
 ## API 调用流程
 
@@ -109,10 +109,12 @@ POST /api/v1/comics
   "title": "裂缝初行",
   "chapter": "第一章",
   "novel_text": "主角林墨踏入无人探索的次元裂缝...",
+  "panel_count": 6,                    // 可选：手动指定分镜数量（4-10），智能分镜时设为null
+  "use_smart_panel": false,             // 可选：是否使用AI智能分镜（默认false）
   "settings": {
-    "narrative_style": "manga",
+    "narrative_style": "manga",        // 漫画风格：manga（日漫）、cinematic（电影）、western（欧美）
     "panel_resolution": "1024x1024",
-    "voice": "alloy",
+    "voice": "alloy",                  // 配音选项：alloy、echo、fable、onyx、nova、shimmer，或null（无配音）
     "language": "zh-CN"
   }
 }
@@ -161,14 +163,18 @@ GET /api/v1/comics
 
 返回当前登录用户的漫画生成列表，可在前端点击回看。
 
-## 示例结果亮点
+## 最新功能亮点 (v2.1.3)
 
-- **鉴权安全**：JWT Bearer Token 确保任务仅限本人访问。
-- **分镜拆分**：OpenAI Responses API 将小说片段拆成 4~8 个分镜。
-- **图像生成**：`dall-e-3` 输出 base64 PNG，落盘至 `backend/output` 并通过 `/static` 暴露。
-- **语音合成**：`tts-1` 生成旁白 MP3 音频流。
-- **持久化**：SQLModel 存储 Comic/Panel，便于历史查询与复核。
-- **前端体验**：身份验证 + 任务进度条 + 历史列表 + 图像与配音预览。
+- **AI智能分镜**：支持手动指定分镜数量或让AI根据小说内容智能决定最佳分镜数量（4-10个）
+- **风格一致性优化**：确保同一漫画内图像风格统一，支持日漫叙事、电影分镜、欧美漫画三种风格
+- **分镜数量选择**：支持4/6/8/10个分镜手动选择，满足不同复杂度内容需求
+- **配音功能优化**：配音改为可选，支持"无配音"选项，提供Alloy、Echo等6种语音合成选项
+- **鉴权安全**：JWT Bearer Token 确保任务仅限本人访问
+- **分镜拆分**：OpenAI Responses API 将小说片段拆成智能或指定数量的分镜
+- **图像生成**：`gpt-image-1` 输出 base64 PNG，落盘至 `backend/output` 并通过 `/static` 暴露
+- **语音合成**：`gpt-4o-mini-tts` 生成旁白 MP3 音频流
+- **持久化**：SQLModel 存储 Comic/Panel，便于历史查询与复核
+- **前端体验**：身份验证 + 任务进度条 + 历史列表 + 图像与配音预览 + 分镜数量输入框 + AI智能分镜复选框
 
 > 提示词与模型名称可根据实际账号与预算调整，必要时可替换为第三方兼容的 OpenAI 接口。落地部署时请配置 HTTPS、对象存储、队列任务与缓存等生产级服务。
 
@@ -183,7 +189,7 @@ GET /api/v1/comics
   $env:OPENAI_API_KEY = "sk-xxxx"
   $env:OPENAI_OUTLINE_MODEL = "gpt-4.1-mini"      # 兼容服务提供的模型名
   $env:OPENAI_PROMPT_MODEL  = "gpt-4o-mini"
-  $env:OPENAI_IMAGE_MODEL   = "dall-e-3"          # 若服务不支持生图，可换成兼容模型
+  $env:OPENAI_IMAGE_MODEL   = "gpt-image-1"       # 若服务不支持生图，可换成可用模型
   ```
 
 2. 重启 `uvicorn app.main:app --reload`，前端刷新后重新登录即可。

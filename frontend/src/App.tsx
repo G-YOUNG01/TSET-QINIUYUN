@@ -57,6 +57,8 @@ function App() {
   const [title, setTitle] = useState("裂缝初行");
   const [voice, setVoice] = useState("alloy");
   const [style, setStyle] = useState("manga");
+  const [panelCount, setPanelCount] = useState<number>(4); // 默认4个分镜
+  const [useSmartPanel, setUseSmartPanel] = useState(false); // 是否使用智能分镜
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -212,6 +214,8 @@ function App() {
         novel_text: novelText,
         chapter,
         title,
+        panel_count: useSmartPanel ? null : panelCount, // 智能分镜时传null
+        use_smart_panel: useSmartPanel, // 添加智能分镜标志
         settings: {
           voice,
           narrative_style: style,
@@ -267,7 +271,11 @@ function App() {
           setResult(null);
         }
         
-        setStatus({ status: 'success', detail: '记录删除成功' });
+        setStatus((prevStatus) => (
+          prevStatus
+            ? { ...prevStatus, detail: "记录删除成功" }
+            : prevStatus
+        ));
       }
     } catch (error) {
       console.error('删除记录失败:', error);
@@ -407,15 +415,57 @@ function App() {
                   <option value="western">欧美漫画</option>
                 </select>
               </label>
+              <div className="panel-count-container">
+                <label>
+                  分镜数量
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={panelCount}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                      const value = parseInt(event.target.value);
+                      if (value >= 1 && value <= 20) {
+                        setPanelCount(value);
+                      } else if (value > 20) {
+                        setPanelCount(20);
+                      } else if (event.target.value === "") {
+                        setPanelCount(1);
+                      }
+                    }}
+                    disabled={useSmartPanel}
+                    placeholder="输入分镜数量（1-20）"
+                  />
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={useSmartPanel}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setUseSmartPanel(event.target.checked)
+                    }
+                  />
+                  AI智能分镜
+                </label>
+              </div>
+            </div>
+            <div className="row">
               <label>
-                配音
-                <input
+                配音选项
+                <select
                   value={voice}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                     setVoice(event.target.value)
                   }
-                  placeholder="alloy"
-                />
+                >
+                  <option value="">无配音</option>
+                  <option value="alloy">Alloy</option>
+                  <option value="echo">Echo</option>
+                  <option value="fable">Fable</option>
+                  <option value="onyx">Onyx</option>
+                  <option value="nova">Nova</option>
+                  <option value="shimmer">Shimmer</option>
+                </select>
               </label>
             </div>
             <button type="submit" disabled={!token}>
