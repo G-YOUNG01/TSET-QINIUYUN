@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24
 
-    openai_api_key: str = Field("sk-4mTSiqiQNy9oI8iYAT4eW6a7yFK8xJ4SbaWYo23f7Soh7PbJ", env="OPENAI_API_KEY")
+    openai_api_key: str = Field("  ", env="OPENAI_API_KEY")
     openai_base_url: Optional[str] = Field("https://api.ruyun.fun/v1", env="OPENAI_BASE_URL")
     openai_outline_model: str = Field("gpt-4.1-mini", env="OPENAI_OUTLINE_MODEL")
     openai_prompt_model: str = Field("gpt-4o-mini", env="OPENAI_PROMPT_MODEL")
