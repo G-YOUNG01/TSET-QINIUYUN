@@ -1,112 +1,143 @@
 # Novel2Comic
 
-Novel2Comic 将长篇小说文本转换为带配音的漫画分镜稿。系统串联 OpenAI LLM、图像生成与 TTS 服务，配合 SQL 持久化与 JWT 鉴权，提供可落地的创作流程。
+> 将长篇小说文本一键转换为带配音的漫画分镜稿——AI 智能分镜 + 图像生成 + TTS 语音合成，支持日漫 / 电影 / 欧美三种叙事风格。
 
-## 系统架构图
+## ✨ 功能特性
 
-```mermaid
-graph LR
-    A[React/Vite] --> B[FastAPI REST]
-    B --> C[Pipeline 协调]
-    C --> D[OpenAI APIs]
-    
-    B --> E[SQLModel ORM<br/>Comic/Panel]
-    C --> E
-    
-    D --> F[本地存储输出]
-    
-    A --> G[浏览器用户]
-    
-    %% 样式优化（可选，增强可读性）
-    classDef front fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    classDef back fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef pipe fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
-    classDef ai fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    classDef db fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    classDef user fill:#f1f8e9,stroke:#558b2f,stroke-width:2px
-    
-    class A,G front
-    class B back
-    class C pipe
-    class D ai
-    class E db
-    class F back
+- **小说转漫画**：输入小说章节文本，自动拆分为分镜大纲，逐格生成画面与旁白配音
+- **AI 智能分镜**：可手动指定分镜数量（4/6/8/10），或让 AI 根据内容复杂度自适应决定（4–10 格）
+- **三种叙事风格**：日漫（manga）、电影感（cinematic）、欧美漫画（western），同作品内风格一致
+- **图像生成**：基于 `gpt-image-1` 输出 1024×1024 PNG，落盘后通过 `/static` 公开访问
+- **TTS 配音**：6 种语音可选（alloy / echo / fable / onyx / nova / shimmer），支持"无配音"选项
+- **异步任务流水线**：故事拆分 → 提示词生成 → 图像生成 → 语音合成，持续回写进度，前端轮询展示
+- **多模型兼容**：自动在 OpenAI Responses API 与 Chat Completions 之间切换，支持第三方兼容服务（如自建代理）
+- **用户鉴权**：JWT Bearer Token，注册 / 登录，任务数据与历史记录仅限本人访问
+- **历史记录**：所有生成任务持久化存储，可随时回看与重新预览
+- **暗色 UI**：React + Vite 前端，登录、任务配置、进度条、历史面板、图像与音频预览一体化
+
+## 🛠 技术栈
+
+| 类别 | 技术 | 版本 |
+|------|------|------|
+| 后端语言 | Python | 3.x |
+| Web 框架 | FastAPI | 0.111.0 |
+| ASGI 服务器 | Uvicorn | 0.30.1 |
+| ORM | SQLModel | 0.0.22 |
+| 数据库 | SQLite（aiosqlite 异步驱动） | — |
+| 数据库迁移 | Alembic | 1.13.2 |
+| AI SDK | OpenAI Python | 1.35.3 |
+| HTTP 客户端 | httpx | 0.27.0 |
+| 鉴权 | python-jose（JWT）+ passlib[bcrypt] | 3.3.0 / 1.7.4 |
+| 配置管理 | pydantic-settings | 2.4.0 |
+| 前端框架 | React | 18.3.1 |
+| 构建工具 | Vite | 5.3.3 |
+| 前端语言 | TypeScript | 5.5.4 |
+| HTTP 库 | axios | 1.7.2 |
+
+## 📁 项目结构
+
+```
+Novel2Comic-1/
+├── backend/                    # 后端服务（FastAPI）
+│   ├── app/
+│   │   ├── main.py             # FastAPI 应用入口：CORS、静态文件、数据库初始化、路由挂载
+│   │   ├── config.py           # 环境变量集中管理（OpenAI / JWT / 数据库）
+│   │   ├── database.py         # 异步 SQLModel Session 工厂
+│   │   ├── models.py           # ORM 模型：User / Comic / Panel 及关系映射
+│   │   ├── schemas.py          # Pydantic 输入输出模型（Comic 请求、状态、Token 等）
+│   │   ├── auth.py             # PBKDF2-SHA256 密码哈希 + JWT 生成校验 + 当前用户依赖
+│   │   ├── services.py         # OpenAI 调用封装、资产落盘、数据库状态刷新
+│   │   └── routers/
+│   │       ├── auth.py         # 注册 / 登录路由，返回 Bearer Token
+│   │       └── comics.py       # 漫画生成、状态轮询、历史列表、结果获取
+│   ├── output/                 # 生成产物（PNG / MP3），通过 /static 暴露（运行时自动创建）
+│   └── requirements.txt        # Python 依赖
+├── frontend/                   # 前端应用（React + Vite）
+│   ├── src/
+│   │   ├── App.tsx             # 主界面：登录、生成配置、任务轮询、历史记录、面板展示
+│   │   ├── main.tsx            # React 入口
+│   │   └── style.css           # 暗色系 UI 样式
+│   ├── index.html
+│   ├── vite.config.ts          # Vite 配置（/api 代理至 localhost:8000）
+│   └── package.json
+├── novel-test/                 # 示例小说文本（第一/二/三章）
+├── 产品说明文档.md              # 产品定位、用户分析、技术选型、路线图
+├── CHANGELOG.md                # 版本变更记录
+└── README.md
 ```
 
-- **前端**：React + Axios 处理登录、任务提交、历史记录与结果预览。
-- **FastAPI**：挂载鉴权与漫画路由，初始化数据库并提供静态资源服务。
-- **Pipeline**：异步协同故事拆分、图像生成、语音合成，持续回写状态，支持 Responses API 或 Chat Completions 兼容接口自动回退。
-- **SQLModel**：持久化 `User`、`Comic`、`Panel` 数据，实现任务可追溯与重放。
-- **OpenAI / 兼容服务**：`Responses` 或兼容 Chat Completions 拆分分镜，`Images` 生成画面，`Audio TTS` 输出旁白。
-- **本地存储**：PNG / MP3 落盘至 `backend/output/`，通过 `/static` 公开访问。
+## 🚀 快速开始
 
-## 模块设计与依赖
+### 环境要求
 
-### Backend (`backend/`)
-- `app/main.py`：FastAPI 应用，CORS、静态文件、数据库初始化。
-- `app/config.py`：集中管理 OpenAI、JWT、数据库等环境变量。
-- `app/database.py`：提供异步 `sqlmodel` Session 工厂用于 API 与后台任务。
-- `app/models.py`：`User`, `Comic`, `Panel` ORM 模型及关系映射。
-- `app/schemas.py`：Pydantic 输入 / 输出模型（Comic 请求、状态、Token 等）。
-- `app/auth.py`：PBKDF2-SHA256 密码哈希（兼容加盐），JWT 生成与校验、当前用户依赖。
-- `app/services.py`：OpenAI 调用封装、资产落盘与数据库状态刷新。
-- `app/routers/auth.py`：注册、登录，返回 Bearer Token。
-- `app/routers/comics.py`：漫画生成、状态轮询、历史列表、结果获取。
-- 主要依赖：`fastapi`, `sqlmodel`, `openai`, `python-jose[cryptography]`, `passlib[bcrypt]`, `httpx`, `alembic`, `uvicorn`。
+- Python >= 3.10
+- Node.js >= 18
+- OpenAI API Key（或第三方兼容服务密钥）
 
-### Frontend (`frontend/`)
-- `src/App.tsx`：登录表单、生成配置、任务轮询、历史记录与面板展示。
-- `src/main.tsx`：React 入口。
-- `src/style.css`：暗色系 UI、历史面板与状态卡片样式。
-- 依赖：`react`, `react-dom`, `axios`；开发工具 `vite`, `typescript`, `@vitejs/plugin-react`。
+### 后端启动
 
-## 环境准备与运行
-
-### 后端
-
-```pwsh
+```bash
 cd backend
 python -m venv .venv
-\.\.venv\Scripts\Activate.ps1
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+# macOS / Linux
+# source .venv/bin/activate
+
 pip install -r requirements.txt
-uvicorn app.main:app --reload  # 可按需添加 --host / --port
+uvicorn app.main:app --reload
 ```
 
-在 `.env` 或环境变量中准备必需配置：
+后端默认运行在 `http://localhost:8000`，首次启动自动创建数据库表结构。
 
-```pwsh
-$env:OPENAI_API_KEY = "sk-..."
-$env:OPENAI_BASE_URL = "https://api.openai.com/v1"  # 使用官方地址时可省略
-$env:OPENAI_OUTLINE_MODEL = "gpt-4.1-mini"
-$env:OPENAI_PROMPT_MODEL = "gpt-4o-mini"
-$env:OPENAI_IMAGE_MODEL = "gpt-image-1"
-$env:OPENAI_TTS_VOICE = "alloy"
-$env:JWT_SECRET_KEY = "replace-with-a-strong-secret"
-$env:DATABASE_URL = "sqlite+aiosqlite:///./novel2comic.db"
-```
+### 前端启动
 
-若需接入第三方 OpenAI 兼容服务（如自建或代理），请同时设置 `OPENAI_BASE_URL` 与对应模型名称；`services.LLMClient` 会自动在 Responses 与 Chat Completions 之间切换。首次启动时会自动创建表结构，后续扩展可引入 Alembic 迁移。
-
-### 前端
-
-```pwsh
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Vite dev server 会将 `/api` 请求代理至 `http://localhost:8000`。首次使用请在页面内注册并登录，前端会在后续请求中自动附带 `Authorization: Bearer <token>`。
+Vite 开发服务器运行在 `http://localhost:5173`，`/api` 请求自动代理至 `http://localhost:8000`。
 
-## API 调用流程
+### 环境变量配置
 
-1. **注册 / 登录**
+在后端 `.env` 文件或系统环境变量中配置：
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `OPENAI_API_KEY` | 是 | OpenAI（或兼容服务）API 密钥 |
+| `OPENAI_BASE_URL` | 否 | API 基础地址，官方可省略；第三方兼容服务必填 |
+| `OPENAI_OUTLINE_MODEL` | 否 | 分镜大纲模型，默认 `gpt-4.1-mini` |
+| `OPENAI_PROMPT_MODEL` | 否 | 提示词生成模型，默认 `gpt-4o-mini` |
+| `OPENAI_IMAGE_MODEL` | 否 | 图像生成模型，默认 `gpt-image-1` |
+| `OPENAI_TTS_VOICE` | 否 | TTS 语音，默认 `alloy` |
+| `JWT_SECRET_KEY` | 是 | JWT 签名密钥，生产环境请使用强随机字符串 |
+| `DATABASE_URL` | 否 | 数据库连接串，默认 `sqlite+aiosqlite:///./novel2comic.db` |
+
+> 使用第三方兼容服务时，同时设置 `OPENAI_BASE_URL` 与对应模型名称即可；`services.LLMClient` 会自动在 Responses API 与 Chat Completions 之间切换。
+
+## 📖 使用说明
+
+### 操作流程
+
+1. 打开前端页面，注册账号并登录（JWT Token 自动附带于后续请求）
+2. 填写小说标题、章节、正文，选择分镜数量（或启用 AI 智能分镜）
+3. 选择叙事风格（日漫 / 电影 / 欧美）、画面分辨率、配音选项
+4. 提交任务，前端实时轮询展示生成进度
+5. 生成完成后预览分镜图像与旁白音频，可在历史记录中回看
+
+### API 接口
+
+所有接口前缀 `/api/v1`，除注册 / 登录外均需 `Authorization: Bearer <token>`。
+
+#### 认证
 
 ```http
 POST /api/v1/auth/register
-{
-  "email": "user@example.com",
-  "password": "P@ssw0rd"
-}
+Content-Type: application/json
+
+{"email": "user@example.com", "password": "P@ssw0rd"}
 
 POST /api/v1/auth/login
 Content-Type: application/x-www-form-urlencoded
@@ -114,101 +145,94 @@ Content-Type: application/x-www-form-urlencoded
 grant_type=password&username=user@example.com&password=P%40ssw0rd
 ```
 
-返回：`{"access_token":"...","token_type":"bearer"}`。
+返回：`{"access_token": "...", "token_type": "bearer"}`
 
-2. **提交生成任务**（需要 Bearer Token）
+#### 提交生成任务
 
 ```http
 POST /api/v1/comics
+Authorization: Bearer <token>
+Content-Type: application/json
+
 {
   "title": "裂缝初行",
   "chapter": "第一章",
   "novel_text": "主角林墨踏入无人探索的次元裂缝...",
-  "panel_count": 6,                    // 可选：手动指定分镜数量（4-10），智能分镜时设为null
-  "use_smart_panel": false,             // 可选：是否使用AI智能分镜（默认false）
+  "panel_count": 6,
+  "use_smart_panel": false,
   "settings": {
-    "narrative_style": "manga",        // 漫画风格：manga（日漫）、cinematic（电影）、western（欧美）
+    "narrative_style": "manga",
     "panel_resolution": "1024x1024",
-    "voice": "alloy",                  // 配音选项：alloy、echo、fable、onyx、nova、shimmer，或null（无配音）
+    "voice": "alloy",
     "language": "zh-CN"
   }
 }
 ```
 
-响应：`{"comic_id":"7c79b7ac...","status":"queued","progress":0.0}`。
+响应：`{"comic_id": "7c79b7ac...", "status": "queued", "progress": 0.0}`
 
-3. **轮询状态**
-
-```http
-GET /api/v1/comics/7c79b7ac.../status
-```
-
-返回示例：`{"status":"processing","progress":0.35,"detail":"…"}`。
-
-4. **获取生成结果**
+#### 轮询状态
 
 ```http
-GET /api/v1/comics/7c79b7ac...
+GET /api/v1/comics/{comic_id}/status
 ```
 
-```json
-{
-  "comic_id": "7c79b7ac-2b42-4fbe-ad19-3669186f6c35",
-  "chapter": "第一章",
-  "outline": [
-    {"title": "裂缝初现", "summary": "林墨踏入裂缝..."},
-    {"title": "未知相遇", "summary": "光芒中浮现少女..."}
-  ],
-  "assets": [
-    {
-      "panel_id": "af7b4ded-6a27-4aa0-a893-0fbc63ba4f1d",
-      "image_url": "/static/img-....png",
-      "caption": "Neon rift slicing through ruins...",
-      "narration_audio_url": "/static/tts-....mp3"
-    }
-  ]
-}
+返回示例：`{"status": "processing", "progress": 0.35, "detail": "正在生成第 3 格图像..."}`
+
+#### 获取结果
+
+```http
+GET /api/v1/comics/{comic_id}
 ```
 
-5. **历史记录**
+返回包含分镜大纲（outline）与每格资产（assets：图像 URL、字幕、配音音频 URL）。
+
+#### 历史记录
 
 ```http
 GET /api/v1/comics
 ```
 
-返回当前登录用户的漫画生成列表，可在前端点击回看。
+返回当前用户的所有漫画生成任务列表。
 
-## 最新功能亮点 (v2.1.3)
+### 生成产物存储
 
-- **AI智能分镜**：支持手动指定分镜数量或让AI根据小说内容智能决定最佳分镜数量（4-10个）
-- **风格一致性优化**：确保同一漫画内图像风格统一，支持日漫叙事、电影分镜、欧美漫画三种风格
-- **分镜数量选择**：支持4/6/8/10个分镜手动选择，满足不同复杂度内容需求
-- **配音功能优化**：配音改为可选，支持"无配音"选项，提供Alloy、Echo等6种语音合成选项
-- **鉴权安全**：JWT Bearer Token 确保任务仅限本人访问
-- **分镜拆分**：OpenAI Responses API 将小说片段拆成智能或指定数量的分镜
-- **图像生成**：`gpt-image-1` 输出 base64 PNG，落盘至 `backend/output` 并通过 `/static` 暴露
-- **语音合成**：`gpt-4o-mini-tts` 生成旁白 MP3 音频流
-- **持久化**：SQLModel 存储 Comic/Panel，便于历史查询与复核
-- **前端体验**：身份验证 + 任务进度条 + 历史列表 + 图像与配音预览 + 分镜数量输入框 + AI智能分镜复选框
+- 图像（PNG）与音频（MP3）落盘至 `backend/output/`
+- 通过 FastAPI `StaticFiles` 挂载在 `/static` 路径公开访问
+- 数据库中存储文件路径与元数据，便于历史追溯
 
-> 提示词与模型名称可根据实际账号与预算调整，必要时可替换为第三方兼容的 OpenAI 接口。落地部署时请配置 HTTPS、对象存储、队列任务与缓存等生产级服务。
+## 📊 系统架构
 
-## 使用第三方兼容模型服务
+```
+浏览器用户 ──▶ React/Vite 前端 (:5173)
+                    │  /api 代理
+                    ▼
+              FastAPI 后端 (:8000)
+              ├── 鉴权路由（注册 / 登录 → JWT）
+              ├── 漫画路由（提交 / 状态 / 历史 / 结果）
+              ├── Pipeline 协调器（异步：拆分→生图→TTS）
+              ├── SQLModel ORM ──▶ SQLite（novel2comic.db）
+              └── /static ──▶ backend/output/（PNG / MP3）
+                    │
+                    ▼
+              OpenAI / 兼容服务
+              ├── LLM（分镜拆分 + 提示词生成）
+              ├── Images（图像生成）
+              └── Audio TTS（语音合成）
+```
 
-若使用如「如云」等兼容 OpenAI 协议的模型服务：
+## 🤝 贡献指南
 
-1. 在后端运行环境中配置：
+欢迎提交 Issue 和 Pull Request！
 
-  ```pwsh
-  $env:OPENAI_BASE_URL = "https://api.ruyun.fun/v1"
-  $env:OPENAI_API_KEY = "sk-xxxx"
-  $env:OPENAI_OUTLINE_MODEL = "gpt-4.1-mini"      # 兼容服务提供的模型名
-  $env:OPENAI_PROMPT_MODEL  = "gpt-4o-mini"
-  $env:OPENAI_IMAGE_MODEL   = "gpt-image-1"       # 若服务不支持生图，可换成可用模型
-  ```
+- 提交前请确保后端通过 `pip install -r requirements.txt` 正常运行
+- 前端代码请通过 `npm run build` 构建验证
+- 新增功能请同步更新 README 与 CHANGELOG
 
-2. 重启 `uvicorn app.main:app --reload`，前端刷新后重新登录即可。
+## 📄 许可证
 
-3. 若兼容服务暂不支持 Responses API，会自动降级为 Chat Completions；如图像或语音生成功能不可用，可在 `.env` 中仅保留文本模型，并在前端忽略相应失败提示。
+未指定（保留所有权利）。
 
-4. 不要将真实密钥写入仓库，可使用 `.env` 或部署平台的秘密变量保管。PBKDF2-SHA256 密码哈希已内置 8-32 位长度校验，请为生产环境准备强口令策略。
+## 👤 作者
+
+**GYOUNG** - [GitHub](https://github.com/G-YOUNG01)
